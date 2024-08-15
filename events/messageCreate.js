@@ -1,5 +1,5 @@
 // src/events/messageCreate.js
-const GuildConfig = require('../models/guildConfig');
+const GuildConfig = require('../models/GuildConfig');
 const MonitoredMessage = require('../models/monitoredMessage');
 const Blacklist = require('../models/Blacklist');
 const { EmbedBuilder } = require('discord.js');
