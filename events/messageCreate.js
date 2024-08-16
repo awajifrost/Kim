@@ -1,5 +1,5 @@
 // src/events/messageCreate.js
-const GuildConfig = require('../models/GuildConfig');
+const GuildConfig = require('../models/guildConfig');
 const MonitoredMessage = require('../models/monitoredMessage');
 const Blacklist = require('../models/Blacklist');
 const { EmbedBuilder } = require('discord.js');
@@ -19,19 +19,13 @@ module.exports = {
             return;
         }
 
-        // Recherche des liens Discord dans le message
-        const discordInvitePattern = /(discord\.gg\/|discord\.com\/invite\/)([a-zA-Z0-9]+)/g;
-        const invites = [...message.content.matchAll(discordInvitePattern)];
+        // Recherche du lien d'invitation Discord valide dans le message
+        const discordInvitePattern = /(discord\.gg\/|discord\.com\/invite\/)([a-zA-Z0-9]+)/;
+        const match = message.content.match(discordInvitePattern);
 
-        // Vérification du nombre d'invitations détectées
-        if (invites.length !== 1) {
-            await message.delete();
-            const warning = await message.channel.send('Vous ne pouvez partager qu\'une seule invitation Discord par message.');
-            setTimeout(() => warning.delete(), 60000);
-            return;
-        }
+        if (!match) return; // Si aucun lien valide n'est trouvé, on sort de la fonction
 
-        const inviteCode = invites[0][2]; // Récupère le code d'invitation (sans parenthèses ou autres caractères)
+        const inviteCode = match[2]; // Récupère le code d'invitation
 
         try {
             const invite = await client.fetchInvite(inviteCode);
