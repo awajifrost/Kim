@@ -19,9 +19,19 @@ module.exports = {
             return;
         }
 
-        if (!message.content.includes('discord.gg/')) return;
+        // Recherche des liens Discord dans le message
+        const discordInvitePattern = /(discord\.gg\/|discord\.com\/invite\/)([a-zA-Z0-9]+)/g;
+        const invites = [...message.content.matchAll(discordInvitePattern)];
 
-        const inviteCode = message.content.split('discord.gg/')[1].split(' ')[0];
+        // Vérification du nombre d'invitations détectées
+        if (invites.length !== 1) {
+            await message.delete();
+            const warning = await message.channel.send('Vous ne pouvez partager qu\'une seule invitation Discord par message.');
+            setTimeout(() => warning.delete(), 60000);
+            return;
+        }
+
+        const inviteCode = invites[0][2]; // Récupère le code d'invitation (sans parenthèses ou autres caractères)
 
         try {
             const invite = await client.fetchInvite(inviteCode);
