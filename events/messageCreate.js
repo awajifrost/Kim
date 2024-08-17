@@ -6,7 +6,7 @@ const { EmbedBuilder } = require('discord.js');
 module.exports = {
     name: 'messageCreate',
     execute: async (message, client) => {
-        console.log('Message reçu:', message.content); // Log le message reçu
+        console.log('Message reçu:', message.content);
 
         if (message.author.bot) {
             console.log('Message ignoré car envoyé par un bot.');
@@ -33,12 +33,13 @@ module.exports = {
 
         console.log('L\'utilisateur a le rôle requis et le message est dans le bon canal.');
 
-        const discordInvitePattern = /(?:https?:\/\/)?(?:www\.)?(discord\.gg\/|discord\.com\/invite\/)([a-zA-Z0-9]+)/;
+        // Modification du pattern pour inclure les liens personnalisés (le pattern dépend du format des liens personnalisés)
+        const discordInvitePattern = /(?:https?:\/\/)?(?:www\.)?(discord\.gg\/|discord\.com\/invite\/|votrepatternpersonnalisé\/)([a-zA-Z0-9]+)/;
         const match = message.content.match(discordInvitePattern);
 
         if (!match) {
             console.log('Aucune invitation Discord trouvée dans le message.');
-            return; // Aucune invitation trouvée
+            return; 
         }
 
         const inviteCode = match[2];
@@ -112,11 +113,16 @@ module.exports = {
                         console.error('Erreur lors de la vérification de l\'invitation:', error);
                     }
                 }
-            }, 60000); // Délai de 1 minute avant de vérifier l'invitation
+            }, 60000);
 
         } catch (error) {
             console.error('Erreur lors de la récupération de l\'invitation:', error.message);
-            if (error.message === 'Invalid Invite') {
+
+            // Si le lien est un lien personnalisé ou redirigeant qui ne peut pas être validé, vous pouvez ignorer l'erreur
+            if (error.message === 'Unknown Invite' || error.message === 'Invalid Invite') {
+                console.log('Le lien est peut-être personnalisé ou redirigeant, aucune action prise.');
+                // Vous pouvez ici décider d'autoriser le message à rester ou de le supprimer.
+            } else {
                 await message.delete();
                 const warning = await message.channel.send('L\'invitation est invalide et a été supprimée.');
                 setTimeout(() => warning.delete(), 60000);
