@@ -20,7 +20,7 @@ module.exports = {
         }
 
         // Recherche du lien d'invitation Discord valide dans le message
-        const discordInvitePattern = /(discord\.gg\/|discord\.com\/invite\/)([a-zA-Z0-9]+)/;
+        const discordInvitePattern = /(?:https?:\/\/)?(?:www\.)?(discord\.gg\/|discord\.com\/invite\/)([a-zA-Z0-9]+)/;
         const match = message.content.match(discordInvitePattern);
 
         if (!match) return; // Si aucun lien valide n'est trouvé, on sort de la fonction
