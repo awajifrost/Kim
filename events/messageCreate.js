@@ -20,7 +20,11 @@ module.exports = {
 
         // Pattern pour détecter plusieurs types de liens Discord
         const discordInvitePattern = /(?:https?:\/\/)?(?:www\.)?(discord\.gg\/|discord\.com\/invite\/)([a-zA-Z0-9]+)/g;
-        const matches = message.content.matchAll(discordInvitePattern);
+        const matches = Array.from(message.content.matchAll(discordInvitePattern));
+
+        if (matches.length === 0) {
+            return; // Aucun lien Discord détecté, ne rien faire.
+        }
 
         let validInvite = false;
 
@@ -91,6 +95,8 @@ module.exports = {
                         }
                     }
                 }, 60000);
+
+                break; // Sortir de la boucle après avoir traité le premier lien valide
 
             } catch (error) {
                 if (error.message !== 'Unknown Invite' && error.message !== 'Invalid Invite') {
