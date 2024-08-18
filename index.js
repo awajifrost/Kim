@@ -53,55 +53,8 @@ for (const file of eventFiles) {
     }
 }
 
-// Fonction pour vérifier la validité des invitations périodiquement
-async function checkInvites() {
-    const monitoredMessages = await MonitoredMessage.find({});
-    
-    for (const monitoredMessage of monitoredMessages) {
-        try {
-            const message = await client.channels.cache.get(monitoredMessage.channelId).messages.fetch(monitoredMessage.messageId);
-            if (message.content.includes('discord.gg/')) {
-                const inviteCode = message.content.split('discord.gg/')[1].split(' ')[0];
-                try {
-                    const invite = await client.fetchInvite(inviteCode);
-                    if (!invite) throw new Error('Invalid invite');
-                } catch (error) {
-                    const config = await GuildConfig.findOne({ guildId: monitoredMessage.guildId });
-                    if (config) {
-                        config.alertUserIds.forEach(async (userId) => {
-                            const user = await client.guilds.cache.get(monitoredMessage.guildId).members.fetch(userId);
-                            user.send(`Une invitation invalide a été détectée dans le salon <#${monitoredMessage.channelId}>. Code d'invitation: ${monitoredMessage.inviteCode}`);
-                        });
-                    }
-
-                    // Supprimer le message invalide de la base de données
-                    await MonitoredMessage.deleteOne({ messageId: monitoredMessage.messageId });
-                }
-            } else {
-                // Supprimer le message du stockage si ce n'est pas une invitation
-                await MonitoredMessage.deleteOne({ messageId: monitoredMessage.messageId });
-            }
-        } catch (error) {
-            if (error.code === 10008) {
-                // Message non trouvé, donc on le supprime de la base de données
-                await MonitoredMessage.deleteOne({ messageId: monitoredMessage.messageId });
-            } else {
-                console.error('Erreur lors de la vérification d\'un message:', error);
-            }
-        }
-    }
-}
-
-// Vérifier les invitations existantes lorsque le bot se connecte
-client.once('ready', async () => {
-    console.log(`Connecté en tant que ${client.user.tag}`);
-
-    // Vérifier les invitations pour les messages stockés
-    await checkInvites();
-
-    // Planifier une vérification périodique des invitations
-    setInterval(checkInvites, 5000); // Vérifier toutes les heures (3600000 ms)
-});
+// Supprimer la fonction de vérification des invitations
+// Vous avez décidé de ne plus vérifier les invitations périodiquement et de gérer cela uniquement dans le messageCreate
 
 // Événement de suppression d'une invitation
 client.on('inviteDelete', async invite => {
