@@ -42,7 +42,7 @@ module.exports = {
                         .setTitle('Serveur Blacklisté')
                         .setDescription('Le serveur que vous avez partagé est blacklisté pour les partenariats.')
                         .addFields({ name: 'Raison', value: blacklistedServer.reason || 'Aucune raison spécifiée' })
-                        .setColor(0xff0000);
+                        .setColor(0x2b2d31);
 
                     await message.author.send({ embeds: [embed] }).catch(() => {
                         const warning = message.channel.send(`${message.author}, le serveur que vous avez partagé est blacklisté pour les partenariats, mais je ne peux pas vous envoyer un MP.`);
@@ -63,7 +63,7 @@ module.exports = {
                 const embed = new EmbedBuilder()
                     .setTitle(config.embedConfig.title || 'Titre par défaut')
                     .setDescription(config.embedConfig.description || 'Description par défaut')
-                    .setColor(0x231e28)
+                    .setColor(0x2b2d31)
                     .setImage(config.embedConfig.image || null)
                     .setThumbnail(config.embedConfig.thumbnail || null)
                     .setFooter({ text: `Serveur: ${invite.guild.name}, Membres: ${invite.memberCount}` });
