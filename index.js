@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Partials, Collection, InteractionType } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, Collection, InteractionType, ButtonStyle, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonBuilder } = require('discord.js');
 const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
@@ -80,5 +80,137 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
+// Ajout des événements personnalisés pour la vérification des nouveaux membres
+client.on('guildMemberAdd', member => {
+    // Ajouter le rôle de nouveau membre automatiquement
+    const role = member.guild.roles.cache.get(process.env.ROLE_NEW_MEMBER);
+    if (role) {
+        member.roles.add(role).catch(console.error);
+    }
+});
+
+client.on('messageCreate', async message => {
+    if (message.channel.id !== process.env.CHANNEL_ID || message.author.bot) return;
+
+    if (message.content.toLowerCase() === "j'accepte") {
+        const embed = new EmbedBuilder()
+            .setTitle('Vérification - Étape 1')
+            .setDescription('Quel pseudonyme souhaitez-vous avoir ? (Sans caractères spéciaux)')
+            .setColor('#00ff00');
+
+        await message.reply({ embeds: [embed] });
+
+        const filter = msg => msg.author.id === message.author.id && /^[a-zA-Z0-9]+$/.test(msg.content);
+        const collected = await message.channel.awaitMessages({ filter, max: 1, time: 60000, errors: ['time'] })
+            .catch(() => message.reply('Temps écoulé. Veuillez recommencer la vérification.'));
+
+        if (collected) {
+            const newNickname = '𐙚 ' + collected.first().content;
+
+            try {
+                await message.member.setNickname(newNickname);
+                const response = await message.reply(`Votre pseudonyme a été changé en ${newNickname}`);
+                collected.first().delete(); // Supprimer la réponse de l'utilisateur
+                setTimeout(() => response.delete(), 10000); // Supprimer après 10 secondes
+
+                // Passer à l'étape 2
+                askBehaviorQuestion(message);
+            } catch (err) {
+                console.error(err);
+                message.reply('Impossible de changer votre pseudo. Veuillez contacter un administrateur.');
+            }
+        }
+    }
+});
+
+async function askBehaviorQuestion(message) {
+    const embed = new EmbedBuilder()
+        .setTitle('Vérification - Étape 2')
+        .setDescription('Si un membre vous insulte ou fait quelque chose que vous considérez comme de l\'abus, que faites-vous ?')
+        .setColor('#ffcc00');
+
+    const row = new ActionRowBuilder()
+        .addComponents(
+            new StringSelectMenuBuilder()
+                .setCustomId('behaviorSelect')
+                .setPlaceholder('Sélectionnez une option')
+                .addOptions(
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel('Je le signale au staff de la communauté')
+                        .setValue('good'),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel('Je l\'insulte en retour')
+                        .setValue('bad1'),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel('Je le menace')
+                        .setValue('bad2'),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel('Je l\'harcèle')
+                        .setValue('bad3'),
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel('Je m\'en prends à lui')
+                        .setValue('bad4'),
+                )
+        );
+
+    const reply = await message.reply({ embeds: [embed], components: [row] });
+
+    const filter = interaction => interaction.customId === 'behaviorSelect' && interaction.user.id === message.author.id;
+    const collected = await message.channel.awaitMessageComponent({ filter, componentType: 'SELECT_MENU', time: 60000 });
+
+    if (collected) {
+        if (collected.values[0] === 'good') {
+            const response = await collected.reply('Bonne réponse ! Passons à l\'étape suivante.');
+            setTimeout(() => response.delete(), 10000); // Supprimer après 10 secondes
+            reply.delete();
+            askRespectQuestion(message);
+        } else {
+            const response = await collected.reply('Vous avez échoué la vérification. Un membre du staff va examiner votre cas.');
+            setTimeout(() => response.delete(), 10000); // Supprimer après 10 secondes
+        }
+    }
+}
+
+async function askRespectQuestion(message) {
+    const embed = new EmbedBuilder()
+        .setTitle('Vérification - Étape 3')
+        .setDescription('Respecterez-vous la communauté et son règlement ?')
+        .setColor('#00ff00');
+
+    const row = new ActionRowBuilder()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId('yesRespect')
+                .setLabel('Oui')
+                .setStyle(ButtonStyle.Success),
+            new ButtonBuilder()
+                .setCustomId('noRespect')
+                .setLabel('Non')
+                .setStyle(ButtonStyle.Danger)
+        );
+
+    const reply = await message.reply({ embeds: [embed], components: [row] });
+
+    const filter = interaction => (interaction.customId === 'yesRespect' || interaction.customId === 'noRespect') && interaction.user.id === message.author.id;
+    const collected = await message.channel.awaitMessageComponent({ filter, componentType: 'BUTTON', time: 60000 });
+
+    if (collected) {
+        if (collected.customId === 'yesRespect') {
+            const roleVerified = message.guild.roles.cache.get(process.env.ROLE_VERIFIED);
+            const roleNewMember = message.guild.roles.cache.get(process.env.ROLE_NEW_MEMBER);
+            if (roleVerified && roleNewMember) {
+                await message.member.roles.remove(roleNewMember); // Retirer le rôle de nouveau membre
+                await message.member.roles.add(roleVerified); // Ajouter le rôle vérifié
+                const response = await collected.reply('Bienvenue dans la communauté ! Vous avez maintenant accès au serveur.');
+                setTimeout(() => response.delete(), 10000); // Supprimer après 10 secondes
+                reply.delete();
+            }
+        } else {
+            const response = await collected.reply('Vous avez refusé de respecter le règlement. Un membre du staff prendra en charge votre cas.');
+            setTimeout(() => response.delete(), 10000); // Supprimer après 10 secondes
+        }
+    }
+}
+
 // Connexion à Discord
-client.login(process.env.TOKEN);
+client.login(process.env.T
