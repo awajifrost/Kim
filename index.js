@@ -213,4 +213,4 @@ async function askRespectQuestion(message) {
 }
 
 // Connexion à Discord
-client.login(process.env.T
+client.login(process.env.TOKEN);
