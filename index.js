@@ -97,7 +97,7 @@ client.on('messageCreate', async message => {
             .catch(() => message.reply('Temps écoulé. Veuillez recommencer la vérification.'));
 
         if (collected) {
-            const newNickname = '𐙚 ' + collected.first().content;
+            const newNickname = '★' + collected.first().content;
 
             try {
                 await message.member.setNickname(newNickname);
@@ -150,7 +150,8 @@ async function askBehaviorQuestion(message) {
                 )
         );
 
-    const reply = await message.reply({ embeds: [embed], components: [row] });
+    // Envoyer seulement une fois (ajout de components)
+    const reply = await embedMessage.edit({ components: [row] });
 
     const filter = interaction => interaction.customId === 'behaviorSelect' && interaction.user.id === message.author.id;
     const collected = await message.channel.awaitMessageComponent({ filter, componentType: ComponentType.StringSelect, time: 60000 })
@@ -160,7 +161,6 @@ async function askBehaviorQuestion(message) {
         if (collected.values[0] === 'good') {
             const response = await collected.reply('Bonne réponse ! Passons à l\'étape suivante.');
             setTimeout(() => response.delete(), 10000); // Supprimer après 10 secondes
-            reply.delete(); // Supprimer les composants
             embedMessage.delete(); // Supprimer l'embed précédent
             askRespectQuestion(message);
         } else {
@@ -191,7 +191,7 @@ async function askRespectQuestion(message) {
                 .setStyle(ButtonStyle.Danger)
         );
 
-    const reply = await message.reply({ embeds: [embed], components: [row] });
+    const reply = await embedMessage.edit({ components: [row] });
 
     const filter = interaction => (interaction.customId === 'yesRespect' || interaction.customId === 'noRespect') && interaction.user.id === message.author.id;
     const collected = await message.channel.awaitMessageComponent({ filter, componentType: ComponentType.Button, time: 60000 });
@@ -205,17 +205,22 @@ async function askRespectQuestion(message) {
                 await message.member.roles.add(roleVerified); // Ajouter le rôle vérifié
                 const response = await collected.reply('Bienvenue dans la communauté ! Vous avez maintenant accès au serveur.');
                 setTimeout(() => response.delete(), 10000); // Supprimer après 10 secondes
-                reply.delete(); // Supprimer les composants
                 embedMessage.delete(); // Supprimer l'embed précédent
             }
         } else {
             const response = await collected.reply('Vous avez refusé de respecter le règlement. Un membre du staff prendra en charge votre cas.');
             setTimeout(() => response.delete(), 10000); // Supprimer après 10 secondes
-            reply.delete(); // Supprimer les composants
             embedMessage.delete(); // Supprimer l'embed précédent
         }
     }
 }
+
+// Supprimer automatiquement tous les messages du bot après 5 minutes
+client.on('messageCreate', message => {
+    if (message.author.bot) {
+        setTimeout(() => message.delete().catch(console.error), 300000); // 300 000 millisecondes = 5 minutes
+    }
+});
 
 // Connexion à Discord
 client.login(process.env.TOKEN);
