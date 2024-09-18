@@ -5,7 +5,7 @@ const path = require('path');
 require('dotenv').config();
 
 const GuildConfig = require('./models/GuildConfig'); // Modèle GuildConfig
-const MonitoredMessage = require('./models/MonitoredMessage'); // Modèle MonitoredMessage
+const MonitoredMessage = require('./models/MonitoredMessage'); // Modèle MonitoredMessage (assure-toi que ce fichier existe)
 const { handleButtonClick, handleModalSubmit } = require('./handlers/interactionHandler'); // Gestionnaire d'interactions
 
 // Initialiser le client Discord
