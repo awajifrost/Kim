@@ -4,9 +4,9 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
-const GuildConfig = require('./models/GuildConfig'); // Importer le modèle GuildConfig
-const MonitoredMessage = require('./models/MonitoredMessage'); // Importer le modèle MonitoredMessage
-const { handleButtonClick, handleModalSubmit } = require('./handlers/interactionHandler'); // Importer le gestionnaire d'interactions
+const GuildConfig = require('./models/GuildConfig'); // Modèle GuildConfig
+const MonitoredMessage = require('./models/MonitoredMessage'); // Modèle MonitoredMessage
+const { handleButtonClick, handleModalSubmit } = require('./handlers/interactionHandler'); // Gestionnaire d'interactions
 
 // Initialiser le client Discord
 const client = new Client({
@@ -52,6 +52,14 @@ for (const file of eventFiles) {
         client.on(event.name, (...args) => event.execute(...args, client));
     }
 }
+
+// Supprimer la fonction de vérification des invitations
+// Vous avez décidé de ne plus vérifier les invitations périodiquement et de gérer cela uniquement dans le messageCreate
+
+// Événement de suppression d'une invitation
+client.on('inviteDelete', async invite => {
+    await MonitoredMessage.deleteMany({ inviteCode: invite.code }); // Supprimer les messages associés
+});
 
 // Événement d'interaction avec les commandes
 client.on('interactionCreate', async interaction => {
