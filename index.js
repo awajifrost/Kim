@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Partials, Collection, InteractionType, ButtonStyle, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, Collection, InteractionType, ButtonStyle, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonBuilder, ComponentType } = require('discord.js');
 const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
@@ -53,14 +53,6 @@ for (const file of eventFiles) {
     }
 }
 
-// Supprimer la fonction de vérification des invitations
-// Vous avez décidé de ne plus vérifier les invitations périodiquement et de gérer cela uniquement dans le messageCreate
-
-// Événement de suppression d'une invitation
-client.on('inviteDelete', async invite => {
-    await MonitoredMessage.deleteMany({ inviteCode: invite.code }); // Supprimer les messages associés
-});
-
 // Événement d'interaction avec les commandes
 client.on('interactionCreate', async interaction => {
     if (interaction.isChatInputCommand()) {
@@ -98,20 +90,23 @@ client.on('messageCreate', async message => {
             .setDescription('Quel pseudonyme souhaitez-vous avoir ? (Sans caractères spéciaux)')
             .setColor('#00ff00');
 
-        await message.reply({ embeds: [embed] });
+        const embedMessage = await message.reply({ embeds: [embed] });
 
         const filter = msg => msg.author.id === message.author.id && /^[a-zA-Z0-9]+$/.test(msg.content);
         const collected = await message.channel.awaitMessages({ filter, max: 1, time: 60000, errors: ['time'] })
             .catch(() => message.reply('Temps écoulé. Veuillez recommencer la vérification.'));
 
         if (collected) {
-            const newNickname = '𐙚 ' + collected.first().content;
+            const newNickname = '★' + collected.first().content;
 
             try {
                 await message.member.setNickname(newNickname);
                 const response = await message.reply(`Votre pseudonyme a été changé en ${newNickname}`);
                 collected.first().delete(); // Supprimer la réponse de l'utilisateur
                 setTimeout(() => response.delete(), 10000); // Supprimer après 10 secondes
+
+                // Supprimer l'embed de l'étape précédente
+                embedMessage.delete();
 
                 // Passer à l'étape 2
                 askBehaviorQuestion(message);
@@ -128,6 +123,8 @@ async function askBehaviorQuestion(message) {
         .setTitle('Vérification - Étape 2')
         .setDescription('Si un membre vous insulte ou fait quelque chose que vous considérez comme de l\'abus, que faites-vous ?')
         .setColor('#ffcc00');
+
+    const embedMessage = await message.reply({ embeds: [embed] });
 
     const row = new ActionRowBuilder()
         .addComponents(
@@ -156,17 +153,20 @@ async function askBehaviorQuestion(message) {
     const reply = await message.reply({ embeds: [embed], components: [row] });
 
     const filter = interaction => interaction.customId === 'behaviorSelect' && interaction.user.id === message.author.id;
-    const collected = await message.channel.awaitMessageComponent({ filter, componentType: 'SELECT_MENU', time: 60000 });
+    const collected = await message.channel.awaitMessageComponent({ filter, componentType: ComponentType.StringSelect, time: 60000 })
+        .catch(() => message.reply('L\'interaction a expiré. Veuillez recommencer.'));
 
     if (collected) {
         if (collected.values[0] === 'good') {
             const response = await collected.reply('Bonne réponse ! Passons à l\'étape suivante.');
             setTimeout(() => response.delete(), 10000); // Supprimer après 10 secondes
-            reply.delete();
+            reply.delete(); // Supprimer les composants
+            embedMessage.delete(); // Supprimer l'embed précédent
             askRespectQuestion(message);
         } else {
             const response = await collected.reply('Vous avez échoué la vérification. Un membre du staff va examiner votre cas.');
             setTimeout(() => response.delete(), 10000); // Supprimer après 10 secondes
+            embedMessage.delete(); // Supprimer l'embed précédent
         }
     }
 }
@@ -176,6 +176,8 @@ async function askRespectQuestion(message) {
         .setTitle('Vérification - Étape 3')
         .setDescription('Respecterez-vous la communauté et son règlement ?')
         .setColor('#00ff00');
+
+    const embedMessage = await message.reply({ embeds: [embed] });
 
     const row = new ActionRowBuilder()
         .addComponents(
@@ -192,7 +194,7 @@ async function askRespectQuestion(message) {
     const reply = await message.reply({ embeds: [embed], components: [row] });
 
     const filter = interaction => (interaction.customId === 'yesRespect' || interaction.customId === 'noRespect') && interaction.user.id === message.author.id;
-    const collected = await message.channel.awaitMessageComponent({ filter, componentType: 'BUTTON', time: 60000 });
+    const collected = await message.channel.awaitMessageComponent({ filter, componentType: ComponentType.Button, time: 60000 });
 
     if (collected) {
         if (collected.customId === 'yesRespect') {
@@ -203,11 +205,14 @@ async function askRespectQuestion(message) {
                 await message.member.roles.add(roleVerified); // Ajouter le rôle vérifié
                 const response = await collected.reply('Bienvenue dans la communauté ! Vous avez maintenant accès au serveur.');
                 setTimeout(() => response.delete(), 10000); // Supprimer après 10 secondes
-                reply.delete();
+                reply.delete(); // Supprimer les composants
+                embedMessage.delete(); // Supprimer l'embed précédent
             }
         } else {
             const response = await collected.reply('Vous avez refusé de respecter le règlement. Un membre du staff prendra en charge votre cas.');
             setTimeout(() => response.delete(), 10000); // Supprimer après 10 secondes
+            reply.delete(); // Supprimer les composants
+            embedMessage.delete(); // Supprimer l'embed précédent
         }
     }
 }
