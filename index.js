@@ -224,12 +224,5 @@ async function askRespectQuestion(message) {
     }
 }
 
-// Supprimer automatiquement tous les messages du bot après 5 minutes
-client.on('messageCreate', message => {
-    if (message.author.bot) {
-        setTimeout(() => message.delete().catch(console.error), 300000); // 300 000 millisecondes = 5 minutes
-    }
-});
-
 // Connexion à Discord
 client.login(process.env.TOKEN);
