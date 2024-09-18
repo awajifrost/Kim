@@ -97,7 +97,7 @@ client.on('messageCreate', async message => {
             .catch(() => message.reply('Temps écoulé. Veuillez recommencer la vérification.'));
 
         if (collected) {
-            const newNickname = '★' + collected.first().content;
+            const newNickname = '𐙚 ' + collected.first().content;
 
             try {
                 await message.member.setNickname(newNickname);
