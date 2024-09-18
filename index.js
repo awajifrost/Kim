@@ -5,7 +5,7 @@ const path = require('path');
 require('dotenv').config();
 
 const GuildConfig = require('./models/GuildConfig'); // Modèle GuildConfig
-const MonitoredMessage = require('./models/MonitoredMessage'); // Modèle MonitoredMessage (assure-toi que ce fichier existe)
+const MonitoredMessage = require('./models/monitoredMessage'); // Modèle MonitoredMessage (assure-toi que ce fichier existe)
 const { handleButtonClick, handleModalSubmit } = require('./handlers/interactionHandler'); // Gestionnaire d'interactions
 
 // Initialiser le client Discord
@@ -106,7 +106,7 @@ client.on('messageCreate', async message => {
             .catch(() => message.reply('Temps écoulé. Veuillez recommencer la vérification.'));
 
         if (collected) {
-            const newNickname = '★' + collected.first().content;
+            const newNickname = '𐙚 ' + collected.first().content;
 
             try {
                 await message.member.setNickname(newNickname);
