@@ -5,7 +5,7 @@ const path = require('path');
 require('dotenv').config();
 
 const GuildConfig = require('./models/GuildConfig'); // Importer le modèle GuildConfig
-const MonitoredMessage = require('./models/monitoredMessage'); // Importer le modèle MonitoredMessage
+const MonitoredMessage = require('./models/MonitoredMessage'); // Importer le modèle MonitoredMessage
 const { handleButtonClick, handleModalSubmit } = require('./handlers/interactionHandler'); // Importer le gestionnaire d'interactions
 
 // Initialiser le client Discord
@@ -92,7 +92,8 @@ client.on('messageCreate', async message => {
 
         const embedMessage = await message.reply({ embeds: [embed] });
 
-        const filter = msg => msg.author.id === message.author.id && /^[a-zA-Z0-9]+$/.test(msg.content);
+        // Modifier le filtre pour accepter les espaces dans le pseudo
+        const filter = msg => msg.author.id === message.author.id && /^[a-zA-Z0-9 ]+$/.test(msg.content);
         const collected = await message.channel.awaitMessages({ filter, max: 1, time: 60000, errors: ['time'] })
             .catch(() => message.reply('Temps écoulé. Veuillez recommencer la vérification.'));
 
