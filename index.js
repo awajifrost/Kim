@@ -53,9 +53,6 @@ for (const file of eventFiles) {
     }
 }
 
-// Supprimer la fonction de vérification des invitations
-// Vous avez décidé de ne plus vérifier les invitations périodiquement et de gérer cela uniquement dans le messageCreate
-
 // Événement de suppression d'une invitation
 client.on('inviteDelete', async invite => {
     await MonitoredMessage.deleteMany({ inviteCode: invite.code }); // Supprimer les messages associés
@@ -100,7 +97,6 @@ client.on('messageCreate', async message => {
 
         const embedMessage = await message.reply({ embeds: [embed] });
 
-        // Modifier le filtre pour accepter les espaces dans le pseudo
         const filter = msg => msg.author.id === message.author.id && /^[a-zA-Z0-9 ]+$/.test(msg.content);
         const collected = await message.channel.awaitMessages({ filter, max: 1, time: 60000, errors: ['time'] })
             .catch(() => message.reply('Temps écoulé. Veuillez recommencer la vérification.'));
@@ -114,11 +110,9 @@ client.on('messageCreate', async message => {
                 collected.first().delete(); // Supprimer la réponse de l'utilisateur
                 setTimeout(() => response.delete(), 10000); // Supprimer après 10 secondes
 
-                // Supprimer l'embed de l'étape précédente
                 embedMessage.delete();
 
-                // Passer à l'étape 2
-                askBehaviorQuestion(message);
+                askBehaviorQuestion(message); // Passer à l'étape suivante
             } catch (err) {
                 console.error(err);
                 message.reply('Impossible de changer votre pseudo. Veuillez contacter un administrateur.');
@@ -159,7 +153,6 @@ async function askBehaviorQuestion(message) {
                 )
         );
 
-    // Envoyer seulement une fois (ajout de components)
     const reply = await embedMessage.edit({ components: [row] });
 
     const filter = interaction => interaction.customId === 'behaviorSelect' && interaction.user.id === message.author.id;
@@ -169,13 +162,13 @@ async function askBehaviorQuestion(message) {
     if (collected) {
         if (collected.values[0] === 'good') {
             const response = await collected.reply('Bonne réponse ! Passons à l\'étape suivante.');
-            setTimeout(() => response.delete(), 10000); // Supprimer après 10 secondes
-            embedMessage.delete(); // Supprimer l'embed précédent
+            setTimeout(() => response.delete(), 10000);
+            embedMessage.delete();
             askRespectQuestion(message);
         } else {
             const response = await collected.reply('Vous avez échoué la vérification. Un membre du staff va examiner votre cas.');
-            setTimeout(() => response.delete(), 10000); // Supprimer après 10 secondes
-            embedMessage.delete(); // Supprimer l'embed précédent
+            setTimeout(() => response.delete(), 10000);
+            embedMessage.delete();
         }
     }
 }
@@ -213,13 +206,13 @@ async function askRespectQuestion(message) {
                 await message.member.roles.remove(roleNewMember); // Retirer le rôle de nouveau membre
                 await message.member.roles.add(roleVerified); // Ajouter le rôle vérifié
                 const response = await collected.reply('Bienvenue dans la communauté ! Vous avez maintenant accès au serveur.');
-                setTimeout(() => response.delete(), 10000); // Supprimer après 10 secondes
-                embedMessage.delete(); // Supprimer l'embed précédent
+                setTimeout(() => response.delete(), 10000);
+                embedMessage.delete();
             }
         } else {
             const response = await collected.reply('Vous avez refusé de respecter le règlement. Un membre du staff prendra en charge votre cas.');
-            setTimeout(() => response.delete(), 10000); // Supprimer après 10 secondes
-            embedMessage.delete(); // Supprimer l'embed précédent
+            setTimeout(() => response.delete(), 10000);
+            embedMessage.delete();
         }
     }
 }
