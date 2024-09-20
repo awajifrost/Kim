@@ -4,11 +4,10 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
-const GuildConfig = require('./models/GuildConfig'); // Modèle GuildConfig
-const MonitoredMessage = require('./models/monitoredMessage'); // Modèle MonitoredMessage (assure-toi que ce fichier existe)
-const { handleButtonClick, handleModalSubmit } = require('./handlers/interactionHandler'); // Gestionnaire d'interactions
+const GuildConfig = require('./models/GuildConfig');
+const MonitoredMessage = require('./models/monitoredMessage');
+const { handleButtonClick, handleModalSubmit } = require('./handlers/interactionHandler');
 
-// Initialiser le client Discord
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -19,7 +18,6 @@ const client = new Client({
     partials: [Partials.Message, Partials.Channel, Partials.GuildMember],
 });
 
-// Connexion à MongoDB
 mongoose.connect(process.env.MONGO_URI)
     .then(() => {
         console.log('Connecté à MongoDB');
@@ -28,10 +26,8 @@ mongoose.connect(process.env.MONGO_URI)
         console.error('Erreur de connexion à MongoDB:', err);
     });
 
-// Collection des commandes
 client.commands = new Collection();
 
-// Chargement des commandes
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
@@ -40,7 +36,6 @@ for (const file of commandFiles) {
     client.commands.set(command.data.name, command);
 }
 
-// Charger les événements
 const eventsPath = path.join(__dirname, 'events');
 const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
 
@@ -53,12 +48,10 @@ for (const file of eventFiles) {
     }
 }
 
-// Événement de suppression d'une invitation
 client.on('inviteDelete', async invite => {
-    await MonitoredMessage.deleteMany({ inviteCode: invite.code }); // Supprimer les messages associés
+    await MonitoredMessage.deleteMany({ inviteCode: invite.code });
 });
 
-// Événement d'interaction avec les commandes
 client.on('interactionCreate', async interaction => {
     if (interaction.isChatInputCommand()) {
         const command = client.commands.get(interaction.commandName);
@@ -77,9 +70,7 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-// Ajout des événements personnalisés pour la vérification des nouveaux membres
 client.on('guildMemberAdd', member => {
-    // Ajouter le rôle de nouveau membre automatiquement
     const role = member.guild.roles.cache.get(process.env.ROLE_NEW_MEMBER);
     if (role) {
         member.roles.add(role).catch(console.error);
@@ -89,7 +80,13 @@ client.on('guildMemberAdd', member => {
 client.on('messageCreate', async message => {
     if (message.channel.id !== process.env.CHANNEL_ID || message.author.bot) return;
 
-    if (message.content.toLowerCase() === "j'accepte") {
+    console.log(`Message reçu : ${message.content}`);
+
+    const acceptPhrases = ["j'accepte", "j’accepte"]; // Variantes avec apostrophe classique et apostrophe spéciale
+
+    if (acceptPhrases.includes(message.content.toLowerCase())) {
+        console.log(`Message d'acceptation reçu de ${message.author.username}`);
+
         const embed = new EmbedBuilder()
             .setTitle('Vérification - Étape 1')
             .setDescription('Quel pseudonyme souhaitez-vous avoir ? (Sans caractères spéciaux)')
@@ -99,22 +96,25 @@ client.on('messageCreate', async message => {
 
         const filter = msg => msg.author.id === message.author.id && /^[a-zA-Z0-9 ]+$/.test(msg.content);
         const collected = await message.channel.awaitMessages({ filter, max: 1, time: 60000, errors: ['time'] })
-            .catch(() => message.reply('Temps écoulé. Veuillez recommencer la vérification.'));
+            .catch(() => {
+                console.log('Aucune réponse reçue ou temps écoulé pour l\'étape 1.');
+                return message.reply('Temps écoulé. Veuillez recommencer la vérification.');
+            });
 
         if (collected) {
             const newNickname = '𐙚 ' + collected.first().content;
+            console.log(`Pseudo proposé par l'utilisateur : ${newNickname}`);
 
             try {
                 await message.member.setNickname(newNickname);
                 const response = await message.reply(`Votre pseudonyme a été changé en ${newNickname}`);
-                collected.first().delete(); // Supprimer la réponse de l'utilisateur
-                setTimeout(() => response.delete(), 10000); // Supprimer après 10 secondes
+                collected.first().delete();
+                setTimeout(() => response.delete(), 10000);
 
                 embedMessage.delete();
-
                 askBehaviorQuestion(message); // Passer à l'étape suivante
             } catch (err) {
-                console.error(err);
+                console.error(`Erreur lors du changement de pseudo : ${err}`);
                 message.reply('Impossible de changer votre pseudo. Veuillez contacter un administrateur.');
             }
         }
@@ -203,11 +203,12 @@ async function askRespectQuestion(message) {
             const roleVerified = message.guild.roles.cache.get(process.env.ROLE_VERIFIED);
             const roleNewMember = message.guild.roles.cache.get(process.env.ROLE_NEW_MEMBER);
             if (roleVerified && roleNewMember) {
-                await message.member.roles.remove(roleNewMember); // Retirer le rôle de nouveau membre
-                await message.member.roles.add(roleVerified); // Ajouter le rôle vérifié
+                await message.member.roles.remove(roleNewMember);
+                await message.member.roles.add(roleVerified);
                 const response = await collected.reply('Bienvenue dans la communauté ! Vous avez maintenant accès au serveur.');
                 setTimeout(() => response.delete(), 10000);
                 embedMessage.delete();
+                await message.delete(); // Suppression du message "j'accepte" après vérification
             }
         } else {
             const response = await collected.reply('Vous avez refusé de respecter le règlement. Un membre du staff prendra en charge votre cas.');
@@ -217,5 +218,4 @@ async function askRespectQuestion(message) {
     }
 }
 
-// Connexion à Discord
 client.login(process.env.TOKEN);
